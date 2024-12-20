@@ -1,50 +1,110 @@
 @echo off
-REM Set up the directory and files for the setup in C:\
+:: ----------------------------------------
+:: VPN and Tor Auto Setup Script
+:: Created by Krishna Gopal Sahani
+:: ----------------------------------------
 
-set DOWNLOAD_URL=https://github.com/Kgsflink/Vpn_Extension/raw/main/IET_VPN.zip
-set DOWNLOAD_DIR=C:\IET_VPN
-set ZIP_FILE=IET_VPN.zip
-set EXTRACT_DIR=C:\IET_VPN
+:: Set script parameters
+setlocal enabledelayedexpansion
+set VPN_ZIP_URL=https://github.com/Kgsflink/Vpn_Extension/raw/main/IET_VPN.zip
+set INSTALL_DIR=C:\IET_VPN
+set TOR_PATH=%INSTALL_DIR%\tor.exe
 
-echo Downloading IET_VPN.zip from GitHub...
+echo ====================================================
+echo        🌐 IET VPN & Tor Auto Setup Script 🌐
+echo ----------------------------------------------------
+echo This script will:
+echo 1️⃣ Download and install IET VPN and Tor
+echo 2️⃣ Set up the environment PATH for Tor
+echo 3️⃣ Load the IET VPN Chrome extension
+echo ----------------------------------------------------
+echo Please wait while we complete the setup...
+echo ====================================================
 
-REM Download the ZIP file using PowerShell
-powershell -Command "Invoke-WebRequest -Uri %DOWNLOAD_URL% -OutFile %DOWNLOAD_DIR%\%ZIP_FILE%"
+:: Step 1️⃣ - Create Directory for IET VPN
+echo.
+echo 🛠️  Creating directory for IET VPN and Tor...
+mkdir "%INSTALL_DIR%"
+echo ✔️ Directory created successfully.
+echo.
 
-REM Check if the download was successful
-if exist "%DOWNLOAD_DIR%\%ZIP_FILE%" (
-    echo Download successful.
+:: Step 2️⃣ - Download and Extract IET VPN ZIP
+echo 🚀 Downloading IET VPN from GitHub...
+cd /d "%INSTALL_DIR%"
+bitsadmin /transfer "VPNDownload" %VPN_ZIP_URL% "%INSTALL_DIR%\IET_VPN.zip"
+if exist "%INSTALL_DIR%\IET_VPN.zip" (
+    echo ✔️ VPN Extension downloaded successfully.
 ) else (
-    echo Download failed. Exiting.
+    echo ❌ Failed to download the VPN extension. Please check your internet connection.
+    pause
     exit /b
 )
 
-echo Extracting %ZIP_FILE% to %EXTRACT_DIR%...
-
-REM Create the directory if it doesn't exist
-if not exist "%EXTRACT_DIR%" (
-    mkdir "%EXTRACT_DIR%"
-)
-
-REM Unzip the downloaded file using PowerShell
-powershell -Command "Expand-Archive -Path %DOWNLOAD_DIR%\%ZIP_FILE% -DestinationPath %EXTRACT_DIR%"
-
-REM Check if the extraction was successful
-if exist "%EXTRACT_DIR%" (
-    echo Extraction successful.
+echo 📂 Extracting VPN extension files...
+tar -xf "%INSTALL_DIR%\IET_VPN.zip" -C "%INSTALL_DIR%"
+if exist "%INSTALL_DIR%\manifest.json" (
+    echo ✔️ VPN Extension extracted successfully.
 ) else (
-    echo Extraction failed. Exiting.
+    echo ❌ Failed to extract VPN Extension files.
+    pause
     exit /b
 )
 
-REM Set environment variables to run Tor from CMD
-echo Setting PATH environment variable for Tor...
+echo 🔥 Cleaning up temporary files...
+del /q "%INSTALL_DIR%\IET_VPN.zip"
+echo ✔️ Temporary files removed.
+echo.
 
-setx PATH "%PATH%;C:\IET_VPN\Tor\Browser\TorBrowser"
+:: Step 3️⃣ - Set Environment Variable for Tor Path
+echo 🛠️  Adding Tor to the system PATH environment variable...
+setx PATH "%PATH%;%INSTALL_DIR%"
+echo ✔️ Tor path added successfully.
+echo.
 
-REM Check if the PATH variable was updated successfully
-echo PATH updated. New PATH: %PATH%
+:: Step 4️⃣ - Check if Tor is available
+if exist "%TOR_PATH%" (
+    echo ✔️ Tor executable found.
+) else (
+    echo ❌ Tor executable not found in %INSTALL_DIR%.
+    pause
+    exit /b
+)
 
-echo Setup complete. Your IET_VPN has been downloaded, extracted to %EXTRACT_DIR%, and Tor is now available from the Command Prompt.
+:: Step 5️⃣ - Check if Tor is running
+echo 🔎 Checking if Tor is running...
+tasklist /fi "imagename eq tor.exe" | find /i "tor.exe" >nul
+if %errorlevel%==0 (
+    echo ✔️ Tor is already running.
+) else (
+    echo ⚠️  Tor is not running. Starting Tor now...
+    start "" "%TOR_PATH%"
+    timeout /t 10 /nobreak
+    tasklist /fi "imagename eq tor.exe" | find /i "tor.exe" >nul
+    if %errorlevel%==0 (
+        echo ✔️ Tor started successfully.
+    ) else (
+        echo ❌ Failed to start Tor. Please start it manually by running "tor" in cmd.
+    )
+)
+echo.
+
+:: Step 6️⃣ - Load the VPN Extension into Chrome
+echo 🚀 Loading IET VPN Extension into Chrome...
+set CHROME_COMMAND="chrome.exe --load-extension=%INSTALL_DIR%"
+start "" %CHROME_COMMAND%
+echo ✔️ Chrome started with IET VPN Extension loaded.
+echo.
+
+:: Display completion message
+echo ====================================================
+echo 🎉 Setup Complete!
+echo ----------------------------------------------------
+echo You can now use the IET VPN extension in Chrome.
+echo Tor is installed and accessible from the command prompt.
+echo To start Tor manually, just type 'tor' in cmd.
+echo ----------------------------------------------------
+echo 💡 If you encounter any issues, re-run this script.
+echo ====================================================
 
 pause
+exit /b
